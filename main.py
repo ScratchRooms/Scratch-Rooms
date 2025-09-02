@@ -9,19 +9,19 @@ PORT = int(os.environ.get("PORT", 8080))
 # --- WebSocket handler ---
 async def ws_handler(websocket):
     async for message in websocket:
-        await websocket.send(message)  # simple echo, no prints
+        await websocket.send(message)  # echo back, silent
 
 # --- HTTP handler (for health check) ---
 async def http_handler(request):
     return web.Response(text="ok", content_type="text/plain")
 
 async def main():
-    # WebSocket server
+    # Start WebSocket server
     await websockets.serve(ws_handler, HOST, PORT)
 
-    # HTTP server for health checks
+    # Start HTTP server
     app = web.Application()
-    app.add_routes([web.get("/", http_handler), web.head("/", http_handler)])
+    app.add_routes([web.get("/", http_handler)])  # only GET, HEAD is auto-added
 
     runner = web.AppRunner(app)
     await runner.setup()
