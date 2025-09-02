@@ -1,20 +1,19 @@
-import http.server
-import socketserver
+import asyncio
+import websockets
+import os
 
-# Settings
-HOST = "0.0.0.0"  # Listen on all available network interfaces
-PORT = 8080       # You can change this if you want
+HOST = "0.0.0.0"
+PORT = int(os.environ.get("PORT", 8080))
 
-class Handler(http.server.SimpleHTTPRequestHandler):
-    def log_message(self, format, *args):
-        # Override to make logging cleaner
-        print(f"[SERVER] {self.address_string()} - {format % args}")
+async def handler(websocket):
+    async for message in websocket:
+        print(f"Received: {message}")
+        await websocket.send(f"Echo: {message}")
 
-# Threading for better performance
-with socketserver.ThreadingTCPServer((HOST, PORT), Handler) as httpd:
-    print(f"🚀 Server running at http://{HOST}:{PORT}")
-    try:
-        httpd.serve_forever()
-    except KeyboardInterrupt:
-        print("\n🛑 Server shutting down...")
-        httpd.shutdown()
+async def main():
+    async with websockets.serve(handler, HOST, PORT):
+        print(f"🚀 WebSocket server running at ws://{HOST}:{PORT}")
+        await asyncio.Future()  # run forever
+
+if __name__ == "__main__":
+    asyncio.run(main())
