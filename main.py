@@ -1,5 +1,3 @@
-import asyncio
-import websockets
 import os
 from aiohttp import web
 
@@ -7,28 +5,27 @@ HOST = "0.0.0.0"
 PORT = int(os.environ.get("PORT", 8080))
 
 # --- WebSocket handler ---
-async def ws_handler(websocket):
-    async for message in websocket:
-        await websocket.send(message)  # echo back, silent
+async def ws_handler(request):
+    ws = web.WebSocketResponse()
+    await ws.prepare(request)
 
-# --- HTTP handler (for health check) ---
+    async for msg in ws:
+        if msg.type == web.WSMsgType.TEXT:
+            await ws.send_str(msg.data)  # echo back
+        elif msg.type == web.WSMsgType.BINARY:
+            await ws.send_bytes(msg.data)
+
+    return ws
+
+# --- HTTP handler (for health checks) ---
 async def http_handler(request):
     return web.Response(text="ok", content_type="text/plain")
 
-async def main():
-    # Start WebSocket server
-    await websockets.serve(ws_handler, HOST, PORT)
-
-    # Start HTTP server
-    app = web.Application()
-    app.add_routes([web.get("/", http_handler)])  # only GET, HEAD is auto-added
-
-    runner = web.AppRunner(app)
-    await runner.setup()
-    site = web.TCPSite(runner, HOST, PORT)
-    await site.start()
-
-    await asyncio.Future()  # run forever
+app = web.Application()
+app.add_routes([
+    web.get("/", http_handler),
+    web.get("/ws", ws_handler),  # WebSocket endpoint
+])
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    web.run_app(app, host=HOST, port=PORT)
